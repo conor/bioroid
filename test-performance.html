@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bioroid Performance Test</title>
+</head>
+<body>
+  <div id="app"></div>
+  <div id="controls">
+    <button id="update">Update with changes</button>
+    <button id="no-change">Re-render (no changes)</button>
+    <div id="stats"></div>
+  </div>
+
+  <script type="module">
+    import { render } from './dist/index.mjs'
+
+    const app = document.getElementById('app')
+    const stats = document.getElementById('stats')
+    let renderCount = 0
+
+    // Override appendChild to track DOM mutations
+    const originalAppendChild = Element.prototype.appendChild
+    let mutations = 0
+    Element.prototype.appendChild = function(child) {
+      mutations++
+      return originalAppendChild.call(this, child)
+    }
+
+    // Override innerHTML to track DOM clearing
+    const originalInnerHTMLSetter = Object.getOwnPropertyDescriptor(Element.prototype, 'innerHTML').set
+    let clears = 0
+    Object.defineProperty(Element.prototype, 'innerHTML', {
+      set: function(value) {
+        if (value === '') clears++
+        return originalInnerHTMLSetter.call(this, value)
+      },
+      get: function() {
+        return originalInnerHTMLGetter.call(this)
+      }
+    })
+
+    function updateStats() {
+      stats.innerHTML = `Renders: ${renderCount}, DOM clears: ${clears}, DOM mutations: ${mutations}`
+    }
+
+    let counter = 0
+    function renderApp() {
+      renderCount++
+      const start = performance.now()
+      
+      render(app, [
+        'div',
+        ['h1', 'Performance Test'],
+        ['p', `Counter: ${counter}`],
+        ['div', { class: 'list' },
+          ['ul',
+            ['li', { 'singultus/key': 1 }, 'Item 1'],
+            ['li', { 'singultus/key': 2 }, 'Item 2'],
+            ['li', { 'singultus/key': 3 }, 'Item 3']
+          ]
+        ]
+      ])
+      
+      const end = performance.now()
+      console.log(`Render took ${end - start}ms`)
+      updateStats()
+    }
+
+    // Initial render
+    renderApp()
+
+    document.getElementById('update').addEventListener('click', () => {
+      counter++
+      renderApp()
+    })
+
+    document.getElementById('no-change').addEventListener('click', () => {
+      // Render the exact same content - should be optimized away
+      renderApp()
+    })
+
+    updateStats()
+  </script>
+
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; }
+    #controls { margin-top: 20px; }
+    button { margin-right: 10px; padding: 8px 16px; }
+    #stats { margin-top: 10px; font-weight: bold; }
+  </style>
+</body>
+</html>
