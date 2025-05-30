@@ -54,6 +54,12 @@ interface SingultusAttributes {
 interface EventAction$1 {
     type: string;
     data?: Record<string, any>;
+    enrichment?: {
+        includeValue?: boolean;
+        includeChecked?: boolean;
+        includeTimestamp?: boolean;
+        namespace?: string;
+    };
 }
 interface EventDispatcher$1 {
     dispatch(action: EventAction$1): void;
@@ -110,6 +116,12 @@ declare function applyChildPatches(parent: Element, operations: PatchOperation[]
 interface EventAction {
     type: string;
     data?: Record<string, any>;
+    enrichment?: {
+        includeValue?: boolean;
+        includeChecked?: boolean;
+        includeTimestamp?: boolean;
+        namespace?: string;
+    };
 }
 interface EventDispatcher {
     dispatch(action: EventAction): void;
@@ -122,7 +134,8 @@ declare class DefaultEventDispatcher implements EventDispatcher {
 }
 declare function setEventDispatcher(dispatcher: EventDispatcher): void;
 declare function getEventDispatcher(): EventDispatcher;
+declare function resetEventSystem(): void;
 declare function attachEventAction(element: Element, eventType: string, action: EventAction): void;
 declare function removeEventAction(element: Element, eventType: string): void;
 
-export { ComponentFunction, DefaultEventDispatcher, EventAction$1 as EventAction, EventDispatcher$1 as EventDispatcher, Patch, PatchOperation, RenderState, SingultusAttributes, SingultusElement, SingultusNode, VNode, applyChildPatches, applyPatches, attachEventAction, createElement, createVNode, diff, getEventDispatcher, removeEventAction, render, renderSimple, setAttributes, setEventDispatcher, updateAttributes };
+export { ComponentFunction, DefaultEventDispatcher, EventAction$1 as EventAction, EventDispatcher$1 as EventDispatcher, Patch, PatchOperation, RenderState, SingultusAttributes, SingultusElement, SingultusNode, VNode, applyChildPatches, applyPatches, attachEventAction, createElement, createVNode, diff, getEventDispatcher, removeEventAction, render, renderSimple, resetEventSystem, setAttributes, setEventDispatcher, updateAttributes };

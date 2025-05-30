@@ -259,44 +259,72 @@ var DefaultEventDispatcher = class {
     return () => this.handlers.delete(handler);
   }
 };
-var globalDispatcher = new DefaultEventDispatcher();
+var currentContext = {
+  dispatcher: new DefaultEventDispatcher(),
+  isInitialized: false
+};
 function setEventDispatcher(dispatcher) {
-  globalDispatcher = dispatcher;
+  currentContext.dispatcher = dispatcher;
 }
 function getEventDispatcher() {
-  return globalDispatcher;
+  return currentContext.dispatcher;
+}
+function resetEventSystem() {
+  currentContext = {
+    dispatcher: new DefaultEventDispatcher(),
+    isInitialized: false
+  };
 }
 var EVENT_ACTIONS_KEY = "__bioroid_events__";
-var isEventSystemInitialized = false;
 var DELEGATED_EVENTS = ["click", "input", "change", "submit", "focus", "blur", "keydown", "keyup", "mousedown", "mouseup"];
+var MAX_BUBBLE_DEPTH = 50;
 function initializeEventSystem() {
-  if (isEventSystemInitialized)
+  if (currentContext.isInitialized)
     return;
   for (const eventType of DELEGATED_EVENTS) {
     document.addEventListener(eventType, (event) => {
       let target = event.target;
-      while (target && target !== document.body) {
+      let depth = 0;
+      while (target && target !== document.body && depth < MAX_BUBBLE_DEPTH) {
         const eventActions = target[EVENT_ACTIONS_KEY];
         if (eventActions && eventActions[eventType]) {
           const action = eventActions[eventType];
           event.preventDefault();
-          const enrichedAction = {
-            ...action,
-            data: {
-              ...action.data,
-              value: target instanceof HTMLInputElement ? target.value : void 0,
-              checked: target instanceof HTMLInputElement ? target.checked : void 0,
-              timestamp: Date.now()
-            }
-          };
-          globalDispatcher.dispatch(enrichedAction);
+          const enrichedAction = enrichEventAction(action, target, event);
+          currentContext.dispatcher.dispatch(enrichedAction);
           break;
         }
         target = target.parentElement;
+        depth++;
       }
     }, true);
   }
-  isEventSystemInitialized = true;
+  currentContext.isInitialized = true;
+}
+function enrichEventAction(action, target, event) {
+  if (!action.enrichment) {
+    return action;
+  }
+  const { enrichment } = action;
+  const namespace = enrichment.namespace || "bioroid";
+  const enrichedData = { ...action.data };
+  const enrichmentData = {};
+  if (enrichment.includeValue && target instanceof HTMLInputElement) {
+    enrichmentData.value = target.value;
+  }
+  if (enrichment.includeChecked && target instanceof HTMLInputElement) {
+    enrichmentData.checked = target.checked;
+  }
+  if (enrichment.includeTimestamp) {
+    enrichmentData.timestamp = Date.now();
+  }
+  if (Object.keys(enrichmentData).length > 0) {
+    enrichedData[namespace] = enrichmentData;
+  }
+  return {
+    ...action,
+    data: enrichedData
+  };
 }
 function attachEventAction(element, eventType, action) {
   initializeEventSystem();
@@ -727,6 +755,7 @@ export {
   removeEventAction,
   render,
   renderSimple,
+  resetEventSystem,
   setAttributes,
   setEventDispatcher,
   updateAttributes
