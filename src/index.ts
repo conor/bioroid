@@ -1,7 +1,8 @@
 export { render, renderSimple } from './singultus'
 export { createVNode } from './vdom'
 export { diff } from './diff'
-export { createElement, applyPatches, updateAttributes, applyChildPatches } from './patch'
+export { createElement, applyPatches, applyChildPatches } from './patch'
+export { setAttributes, updateAttributes } from './attributes'
 export { 
   setEventDispatcher, 
   getEventDispatcher, 

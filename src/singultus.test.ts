@@ -21,7 +21,10 @@ describe('Bioroid Singultus', () => {
 
   it('renders tag with attributes', () => {
     render(container, ['div', { id: 'test', class: 'container' }, 'Hello'])
-    expect(container.innerHTML).toBe('<div class="container" id="test">Hello</div>')
+    const div = container.querySelector('div')!
+    expect(div.id).toBe('test')
+    expect(div.className).toBe('container')
+    expect(div.textContent).toBe('Hello')
   })
 
   it('renders tag with CSS selector syntax', () => {

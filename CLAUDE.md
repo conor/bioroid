@@ -18,10 +18,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ### Core Components
 
-- **Singultus System** (`singultus.ts`): Main rendering engine that converts Hiccup-style markup to DOM elements
+- **Singultus System** (`singultus.ts`): Main rendering engine with unified render path using virtual DOM
 - **Virtual DOM** (`vdom.ts`): Creates virtual node representations from Singultus elements, handles SVG detection and CSS selector parsing (e.g., `div#id.class`)
 - **Diffing Algorithm** (`diff.ts`): Performant virtual DOM diffing that generates patches for DOM updates
-- **Patching System** (`patch.ts`): Applies patches to real DOM elements, handles attribute updates and child reordering
+- **Patching System** (`patch.ts`): Applies patches to real DOM elements, handles element creation and updates
+- **Attributes System** (`attributes.ts`): Shared attribute handling for both function-based and data-driven events
 
 ### Data Flow
 
