@@ -76,10 +76,7 @@ export interface SingultusAttributes {
   'singultus/on-render'?: (element: Element) => void
 }
 
-export interface EventAction {
-  type: string
-  data?: Record<string, any>
-}
+import { EventAction } from './types';
 
 export interface EventDispatcher {
   dispatch(action: EventAction): void
