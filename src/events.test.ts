@@ -156,30 +156,6 @@ describe('Event System', () => {
       )
     })
 
-    it('should work alongside function-based event handlers', () => {
-      const functionHandler = vi.fn()
-      const actionHandler = { type: 'ACTION_FIRED' }
-
-      render(container, ['div', [
-        ['button', { 
-          on: { click: functionHandler }
-        }, 'Function Handler'],
-        ['button', { 
-          on: { click: actionHandler }
-        }, 'Action Handler']
-      ]])
-
-      const [funcButton, actionButton] = container.querySelectorAll('button')
-      
-      funcButton.click()
-      expect(functionHandler).toHaveBeenCalled()
-      expect(mockHandler).not.toHaveBeenCalled()
-
-      actionButton.click()
-      expect(mockHandler).toHaveBeenCalledWith(
-        expect.objectContaining({ type: 'ACTION_FIRED' })
-      )
-    })
   })
 
   describe('attachEventAction and removeEventAction', () => {

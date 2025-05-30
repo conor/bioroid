@@ -1,5 +1,6 @@
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { render } from './singultus'
+import { setEventDispatcher } from './events'
 
 describe('Bioroid Singultus', () => {
   let container: HTMLDivElement
@@ -111,18 +112,26 @@ describe('Bioroid Singultus', () => {
     expect(calledElement?.tagName).toBe('DIV')
   })
 
-  it('handles event listeners', () => {
-    let clicked = false
+  it('handles event actions', () => {
+    const mockHandler = vi.fn()
+    setEventDispatcher({ 
+      dispatch: mockHandler, 
+      subscribe: () => () => {} 
+    })
     
     render(container, ['button', { 
       on: { 
-        click: () => { clicked = true }
+        click: { type: 'BUTTON_CLICKED' }
       }
     }, 'Click me'])
     
     const button = container.querySelector('button')!
     button.click()
-    expect(clicked).toBe(true)
+    expect(mockHandler).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: 'BUTTON_CLICKED'
+      })
+    )
   })
 
   it('handles boolean attributes correctly', () => {

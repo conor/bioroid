@@ -47,7 +47,7 @@ interface SingultusAttributes {
     htmlFor?: string;
     [key: `data-${string}`]: any;
     [key: `aria-${string}`]: any;
-    on?: Record<string, EventListener | EventAction$1>;
+    on?: Record<string, EventAction$1>;
     'singultus/key'?: string | number;
     'singultus/on-render'?: (element: Element) => void;
 }

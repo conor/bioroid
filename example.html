@@ -31,7 +31,6 @@
 
         // Set up data-driven event system
         getEventDispatcher().subscribe(action => {
-            console.log('Action dispatched:', action)
             
             switch (action.type) {
                 case 'INCREMENT_COUNTER':
@@ -175,17 +174,9 @@
                     lastSubmittedValue ? ['p', { style: { color: 'green', fontWeight: 'bold' } }, `Last submitted: "${lastSubmittedValue}"`] : null
                 ].filter(Boolean),
                 
-                // Mixed event types example
+                // Data-driven event example
                 ['div.card',
-                    ['h2', 'Mixed Event Types'],
-                    ['div', { style: { marginBottom: '8px' } },
-                        ['button.button', { 
-                            // Traditional function-based event
-                            on: { 
-                                click: () => alert('Function-based event!') 
-                            } 
-                        }, 'Function Event']
-                    ],
+                    ['h2', 'Data-Driven Events'],
                     ['div',
                         ['button.button', { 
                             // Data-driven event

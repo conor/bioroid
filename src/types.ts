@@ -69,7 +69,7 @@ export interface SingultusAttributes {
   [key: `aria-${string}`]: any
   
   // Events
-  on?: Record<string, EventListener | EventAction>
+  on?: Record<string, EventAction>
   
   // Singultus specific
   'singultus/key'?: string | number

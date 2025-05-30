@@ -379,9 +379,7 @@ function setAttributes(element, attrs, isSvg = false) {
       element.textContent = String(value);
     } else if (key === "on" && typeof value === "object" && value !== null) {
       for (const [eventType, handler] of Object.entries(value)) {
-        if (typeof handler === "function") {
-          element.addEventListener(eventType, handler);
-        } else if (handler && typeof handler === "object" && "type" in handler) {
+        if (handler && typeof handler === "object" && "type" in handler) {
           attachEventAction(element, eventType, handler);
         }
       }
@@ -423,9 +421,7 @@ function setAttributes(element, attrs, isSvg = false) {
 function updateAttributes(element, oldProps = {}, newProps = {}, isSvg = false) {
   if (oldProps.on && typeof oldProps.on === "object" && oldProps.on !== null) {
     for (const [eventType, handler] of Object.entries(oldProps.on)) {
-      if (typeof handler === "function") {
-        element.removeEventListener(eventType, handler);
-      } else if (handler && typeof handler === "object" && "type" in handler) {
+      if (handler && typeof handler === "object" && "type" in handler) {
         removeEventAction(element, eventType);
       }
     }
