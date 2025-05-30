@@ -1,5 +1,6 @@
-import { VNode, Patch, PatchOperation, SingultusAttributes } from './types'
+import { VNode, Patch, PatchOperation, SingultusAttributes, EventAction } from './types'
 import { diff } from './diff'
+import { attachEventAction, removeEventAction } from './events'
 
 // Boolean attributes that should be omitted when false
 const BOOLEAN_ATTRIBUTES = new Set([
@@ -44,6 +45,9 @@ function setAttributes(element: Element, attrs: SingultusAttributes, isSvg = fal
       for (const [eventType, handler] of Object.entries(value)) {
         if (typeof handler === 'function') {
           element.addEventListener(eventType, handler as EventListener)
+        } else if (handler && typeof handler === 'object' && 'type' in handler) {
+          // Data-driven event action - use delegation
+          attachEventAction(element, eventType, handler as EventAction)
         }
       }
     } else if (key.startsWith('singultus/')) {
@@ -85,9 +89,12 @@ function setAttributes(element: Element, attrs: SingultusAttributes, isSvg = fal
 export function updateAttributes(element: Element, oldProps: SingultusAttributes = {}, newProps: SingultusAttributes = {}, isSvg = false): void {
   // Special handling for event listeners - always remove old ones first
   if (oldProps.on && typeof oldProps.on === 'object' && oldProps.on !== null) {
-    for (const [eventType, handler] of Object.entries(oldProps.on as Record<string, EventListener>)) {
+    for (const [eventType, handler] of Object.entries(oldProps.on)) {
       if (typeof handler === 'function') {
-        element.removeEventListener(eventType, handler)
+        element.removeEventListener(eventType, handler as EventListener)
+      } else if (handler && typeof handler === 'object' && 'type' in handler) {
+        // Remove data-driven event action
+        removeEventAction(element, eventType)
       }
     }
   }

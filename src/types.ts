@@ -69,11 +69,21 @@ export interface SingultusAttributes {
   [key: `aria-${string}`]: any
   
   // Events
-  on?: Record<string, EventListener>
+  on?: Record<string, EventListener | EventAction>
   
   // Singultus specific
   'singultus/key'?: string | number
   'singultus/on-render'?: (element: Element) => void
+}
+
+export interface EventAction {
+  type: string
+  data?: Record<string, any>
+}
+
+export interface EventDispatcher {
+  dispatch(action: EventAction): void
+  subscribe(handler: (action: EventAction) => void): () => void
 }
 
 export type ComponentFunction = (...args: any[]) => SingultusElement

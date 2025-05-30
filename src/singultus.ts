@@ -1,7 +1,8 @@
-import { SingultusElement, SingultusNode, SingultusAttributes, VNode } from './types'
+import { SingultusElement, SingultusNode, SingultusAttributes, VNode, EventAction } from './types'
 import { createVNode } from './vdom'
 import { diff } from './diff'
 import { applyPatches, createElement, updateAttributes, applyChildPatches } from './patch'
+import { attachEventAction } from './events'
 
 function isNode(element: SingultusElement): element is SingultusNode {
   return Array.isArray(element) && typeof element[0] === 'string'
@@ -54,6 +55,9 @@ function setAttributes(element: Element, attrs: SingultusAttributes): void {
       for (const [eventType, handler] of Object.entries(value)) {
         if (typeof handler === 'function') {
           element.addEventListener(eventType, handler as EventListener)
+        } else if (handler && typeof handler === 'object' && 'type' in handler) {
+          // Data-driven event action - use delegation
+          attachEventAction(element, eventType, handler as EventAction)
         }
       }
     } else if (key.startsWith('singultus/')) {
