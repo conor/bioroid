@@ -31,7 +31,6 @@
 
     // Override innerHTML to track DOM clearing
     const originalInnerHTMLSetter = Object.getOwnPropertyDescriptor(Element.prototype, 'innerHTML').set
-    const originalInnerHTMLGetter = Object.getOwnPropertyDescriptor(Element.prototype, 'innerHTML').get
     let clears = 0
     Object.defineProperty(Element.prototype, 'innerHTML', {
       set: function(value) {
