@@ -17,43 +17,90 @@
     <div id="app"></div>
     
     <script type="module">
-        import { render } from './dist/index.mjs'
+        import { render, getEventDispatcher } from './dist/index.mjs'
 
-        // Example app with diffing performance demo
+        // Example app showcasing data-driven event system and virtual DOM
         let count = 0
         let items = [
             { id: 1, name: 'Apple', price: 1.20 },
             { id: 2, name: 'Banana', price: 0.80 },
             { id: 3, name: 'Cherry', price: 2.50 }
         ]
+        let inputValue = ''
+        let lastSubmittedValue = ''
+
+        // Set up data-driven event system
+        getEventDispatcher().subscribe(action => {
+            
+            switch (action.type) {
+                case 'INCREMENT_COUNTER':
+                    count++
+                    updateApp()
+                    break
+                    
+                case 'SHUFFLE_ITEMS':
+                    items = [...items].sort(() => Math.random() - 0.5)
+                    updateApp()
+                    break
+                    
+                case 'ADD_ITEM':
+                    const newId = Math.max(...items.map(i => i.id)) + 1
+                    items.push({
+                        id: newId,
+                        name: `Item ${newId}`,
+                        price: Math.random() * 5
+                    })
+                    updateApp()
+                    break
+                    
+                case 'REMOVE_ITEM':
+                    if (action.data?.id) {
+                        items = items.filter(item => item.id !== action.data.id)
+                        updateApp()
+                    }
+                    break
+                    
+                case 'INPUT_CHANGED':
+                    inputValue = action.data?.value || ''
+                    updateApp()
+                    break
+                    
+                case 'FORM_SUBMITTED':
+                    lastSubmittedValue = inputValue
+                    inputValue = '' // Clear input after submit
+                    updateApp()
+                    break
+            }
+        })
 
         function updateApp() {
             const app = ['div.container',
-                ['h1', 'Bioroid Singultus Demo with Virtual DOM'],
+                ['h1', 'Bioroid Data-Driven Demo'],
+                
+                // Counter with data-driven events
                 ['div.card', 
-                    ['h2', 'Counter Example (Efficient Updates)'],
+                    ['h2', 'Data-Driven Counter (Action Dispatching)'],
                     ['div.counter', String(count)],
                     ['button.button', { 
                         on: { 
-                            click: () => { 
-                                count++; 
-                                updateApp() 
-                            } 
+                            click: { type: 'INCREMENT_COUNTER' }
                         } 
                     }, 'Increment'],
                     ['button.button', { 
                         style: { marginLeft: '8px' },
                         on: { 
-                            click: () => {
-                                // Shuffle items to test keyed diffing
-                                items = [...items].sort(() => Math.random() - 0.5)
-                                updateApp()
-                            }
+                            click: { type: 'SHUFFLE_ITEMS' }
                         } 
                     }, 'Shuffle List']
                 ],
+                // Interactive list with data-driven events
                 ['div.card',
-                    ['h2', 'Keyed List (Efficient Reordering)'],
+                    ['h2', 'Interactive List (Data Actions)'],
+                    ['div', { style: { marginBottom: '8px' } },
+                        ['button.button', { 
+                            on: { click: { type: 'ADD_ITEM' } }
+                        }, 'Add Item']
+                    ],
                     ['ul',
                         ...items.map(item => 
                             ['li', { 
@@ -62,12 +109,30 @@
                                     padding: '8px',
                                     border: '1px solid #eee',
                                     margin: '4px 0',
-                                    borderRadius: '4px'
+                                    borderRadius: '4px',
+                                    display: 'flex',
+                                    justifyContent: 'space-between',
+                                    alignItems: 'center'
                                 }
                             }, 
-                                ['strong', item.name], 
-                                ' - $', 
-                                String(item.price.toFixed(2))
+                                ['span',
+                                    ['strong', item.name], 
+                                    ' - $', 
+                                    String(item.price.toFixed(2))
+                                ],
+                                ['button', {
+                                    style: { 
+                                        background: '#dc3545', 
+                                        color: 'white', 
+                                        border: 'none', 
+                                        padding: '4px 8px', 
+                                        borderRadius: '2px',
+                                        cursor: 'pointer'
+                                    },
+                                    on: { 
+                                        click: { type: 'REMOVE_ITEM', data: { id: item.id } }
+                                    }
+                                }, '×']
                             ]
                         )
                     ]
@@ -82,21 +147,43 @@
                         ['li.special', { style: { color: 'red' } }, 'Special item']
                     ]
                 ],
+                // Data-driven form example
                 ['div.card',
-                    ['h2', 'Form Example'],
+                    ['h2', 'Data-Driven Form'],
+                    ['form', {
+                        on: { 
+                            submit: { type: 'FORM_SUBMITTED' }
+                        }
+                    },
+                        ['div',
+                            ['input', { 
+                                type: 'text', 
+                                placeholder: 'Enter text here', 
+                                value: inputValue, 
+                                required: true,
+                                on: {
+                                    input: { type: 'INPUT_CHANGED' }
+                                }
+                            }]
+                        ],
+                        ['div', { style: { marginTop: '8px' } },
+                            ['button.button', { type: 'submit' }, 'Submit Form']
+                        ]
+                    ],
+                    ['p', `Current input: "${inputValue}"`],
+                    lastSubmittedValue ? ['p', { style: { color: 'green', fontWeight: 'bold' } }, `Last submitted: "${lastSubmittedValue}"`] : null
+                ].filter(Boolean),
+                
+                // Data-driven event example
+                ['div.card',
+                    ['h2', 'Data-Driven Events'],
                     ['div',
-                        ['input', { type: 'text', placeholder: 'Enter text here', value: '', required: true }]
-                    ],
-                    ['div', { style: { marginTop: '8px' } },
-                        ['input', { type: 'checkbox', checked: true, id: 'demo-checkbox' }],
-                        ['label', { 
-                            htmlFor: 'demo-checkbox',
-                            style: { marginLeft: '8px', cursor: 'pointer' } 
-                        }, 'Check me']
-                    ],
-                    ['div', { style: { marginTop: '8px' } },
-                        ['button', { disabled: false, 'aria-label': 'Toggle state' }, 'Enabled Button'],
-                        ['button', { disabled: true, style: { marginLeft: '8px' } }, 'Disabled Button']
+                        ['button.button', { 
+                            // Data-driven event
+                            on: { 
+                                click: { type: 'INCREMENT_COUNTER' }
+                            } 
+                        }, 'Data Event']
                     ]
                 ],
                 ['div.card',

@@ -1,5 +1,6 @@
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { render } from './singultus'
+import { setEventDispatcher } from './events'
 
 describe('Virtual DOM Diffing', () => {
   let container: HTMLDivElement
@@ -130,25 +131,31 @@ describe('Virtual DOM Diffing', () => {
     expect(element.style.fontSize).toBe('16px')
   })
 
-  it('handles event listener updates', () => {
-    let clicked1 = false
-    let clicked2 = false
+  it('handles event action updates', () => {
+    const mockHandler = vi.fn()
+    setEventDispatcher({ 
+      dispatch: mockHandler, 
+      subscribe: () => () => {} 
+    })
     
     render(container, ['button', {
-      on: { click: () => { clicked1 = true } }
+      on: { click: { type: 'FIRST_ACTION' } }
     }, 'Click me'])
     
     const button = container.querySelector('button')!
     
     render(container, ['button', {
-      on: { click: () => { clicked2 = true } }
+      on: { click: { type: 'SECOND_ACTION' } }
     }, 'Click me'])
     
     expect(container.querySelector('button')).toBe(button)
     
     button.click()
-    expect(clicked1).toBe(false) // Old handler should be removed
-    expect(clicked2).toBe(true)  // New handler should work
+    expect(mockHandler).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: 'SECOND_ACTION'
+      })
+    )
   })
 
   it('calls lifecycle hooks on updates', () => {

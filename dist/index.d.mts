@@ -47,9 +47,23 @@ interface SingultusAttributes {
     htmlFor?: string;
     [key: `data-${string}`]: any;
     [key: `aria-${string}`]: any;
-    on?: Record<string, EventListener>;
+    on?: Record<string, EventAction$1>;
     'singultus/key'?: string | number;
     'singultus/on-render'?: (element: Element) => void;
+}
+interface EventAction$1 {
+    type: string;
+    data?: Record<string, any>;
+    enrichment?: {
+        includeValue?: boolean;
+        includeChecked?: boolean;
+        includeTimestamp?: boolean;
+        namespace?: string;
+    };
+}
+interface EventDispatcher$1 {
+    dispatch(action: EventAction$1): void;
+    subscribe(handler: (action: EventAction$1) => void): () => void;
 }
 type ComponentFunction = (...args: any[]) => SingultusElement;
 interface RenderState {
@@ -92,9 +106,36 @@ declare function createVNode(singultus: SingultusElement, parentIsSvg?: boolean)
 
 declare function diff(oldVNode: VNode | null, newVNode: VNode | null): Patch[];
 
+declare function setAttributes(element: Element, attrs: SingultusAttributes, isSvg?: boolean): void;
 declare function updateAttributes(element: Element, oldProps?: SingultusAttributes, newProps?: SingultusAttributes, isSvg?: boolean): void;
+
 declare function createElement(vNode: VNode): Element | Text;
 declare function applyPatches(element: Element, patches: Patch[], vNodeMap?: Map<Element, VNode>): void;
 declare function applyChildPatches(parent: Element, operations: PatchOperation[], vNodeMap: Map<Element, VNode>): void;
 
-export { ComponentFunction, Patch, PatchOperation, RenderState, SingultusAttributes, SingultusElement, SingultusNode, VNode, applyChildPatches, applyPatches, createElement, createVNode, diff, render, renderSimple, updateAttributes };
+interface EventAction {
+    type: string;
+    data?: Record<string, any>;
+    enrichment?: {
+        includeValue?: boolean;
+        includeChecked?: boolean;
+        includeTimestamp?: boolean;
+        namespace?: string;
+    };
+}
+interface EventDispatcher {
+    dispatch(action: EventAction): void;
+    subscribe(handler: (action: EventAction) => void): () => void;
+}
+declare class DefaultEventDispatcher implements EventDispatcher {
+    private handlers;
+    dispatch(action: EventAction): void;
+    subscribe(handler: (action: EventAction) => void): () => void;
+}
+declare function setEventDispatcher(dispatcher: EventDispatcher): void;
+declare function getEventDispatcher(): EventDispatcher;
+declare function resetEventSystem(): void;
+declare function attachEventAction(element: Element, eventType: string, action: EventAction): void;
+declare function removeEventAction(element: Element, eventType: string): void;
+
+export { ComponentFunction, DefaultEventDispatcher, EventAction$1 as EventAction, EventDispatcher$1 as EventDispatcher, Patch, PatchOperation, RenderState, SingultusAttributes, SingultusElement, SingultusNode, VNode, applyChildPatches, applyPatches, attachEventAction, createElement, createVNode, diff, getEventDispatcher, removeEventAction, render, renderSimple, resetEventSystem, setAttributes, setEventDispatcher, updateAttributes };
