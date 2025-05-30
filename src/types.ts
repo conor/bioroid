@@ -79,6 +79,13 @@ export interface SingultusAttributes {
 export interface EventAction {
   type: string
   data?: Record<string, any>
+  // Control automatic enrichment of event data
+  enrichment?: {
+    includeValue?: boolean
+    includeChecked?: boolean
+    includeTimestamp?: boolean
+    namespace?: string // Namespace for enriched data to avoid conflicts
+  }
 }
 
 export interface EventDispatcher {

@@ -90,7 +90,11 @@
               value: 'render',
               checked: renderMethod === 'render',
               on: { 
-                change: { type: 'CHANGE_RENDER_METHOD', data: { method: 'render' } }
+                change: { 
+                  type: 'CHANGE_RENDER_METHOD', 
+                  data: { method: 'render' },
+                  enrichment: { includeChecked: true, namespace: 'ui' }
+                }
               }
             }],
             ' render() (with diffing)'
@@ -102,7 +106,11 @@
               value: 'renderSimple',
               checked: renderMethod === 'renderSimple',
               on: { 
-                change: { type: 'CHANGE_RENDER_METHOD', data: { method: 'renderSimple' } }
+                change: { 
+                  type: 'CHANGE_RENDER_METHOD', 
+                  data: { method: 'renderSimple' },
+                  enrichment: { includeChecked: true, namespace: 'ui' }
+                }
               }
             }],
             ' renderSimple() (unified path)'
@@ -165,7 +173,9 @@
     getEventDispatcher().subscribe(action => {
       switch (action.type) {
         case 'CHANGE_RENDER_METHOD':
-          renderMethod = action.data?.method || 'render'
+          // Extract method from either data directly or from enriched UI namespace
+          renderMethod = action.data?.method || action.data?.ui?.value || 'render'
+          console.log('Render method changed:', renderMethod, 'Action:', action)
           renderApp()
           break
           

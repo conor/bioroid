@@ -8,7 +8,8 @@ export {
   getEventDispatcher, 
   DefaultEventDispatcher,
   attachEventAction,
-  removeEventAction
+  removeEventAction,
+  resetEventSystem
 } from './events'
 export type { 
   SingultusElement, 
