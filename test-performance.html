@@ -14,11 +14,12 @@
   </div>
 
   <script type="module">
-    import { render } from './dist/index.mjs'
+    import { render, renderSimple, getEventDispatcher } from './dist/index.mjs'
 
     const app = document.getElementById('app')
     const stats = document.getElementById('stats')
     let renderCount = 0
+    let renderMethod = 'render' // 'render' or 'renderSimple'
 
     // Override appendChild to track DOM mutations
     const originalAppendChild = Element.prototype.appendChild
@@ -30,6 +31,7 @@
 
     // Override innerHTML to track DOM clearing
     const originalInnerHTMLSetter = Object.getOwnPropertyDescriptor(Element.prototype, 'innerHTML').set
+    const originalInnerHTMLGetter = Object.getOwnPropertyDescriptor(Element.prototype, 'innerHTML').get
     let clears = 0
     Object.defineProperty(Element.prototype, 'innerHTML', {
       set: function(value) {
@@ -41,43 +43,161 @@
       }
     })
 
+    // Track data-driven events
+    let actionCount = 0
+    getEventDispatcher().subscribe(action => {
+      actionCount++
+      console.log(`Action #${actionCount}:`, action)
+    })
+
     function updateStats() {
-      stats.innerHTML = `Renders: ${renderCount}, DOM clears: ${clears}, DOM mutations: ${mutations}`
+      stats.innerHTML = `
+        Renders: ${renderCount} | 
+        Method: ${renderMethod} | 
+        DOM clears: ${clears} | 
+        DOM mutations: ${mutations} | 
+        Actions: ${actionCount}
+      `
     }
 
     let counter = 0
+    let items = [
+      { id: 1, name: 'Alpha', value: Math.random() },
+      { id: 2, name: 'Beta', value: Math.random() },
+      { id: 3, name: 'Gamma', value: Math.random() },
+      { id: 4, name: 'Delta', value: Math.random() },
+      { id: 5, name: 'Epsilon', value: Math.random() }
+    ]
+
     function renderApp() {
       renderCount++
       const start = performance.now()
       
-      render(app, [
+      const currentRenderFn = renderMethod === 'renderSimple' ? renderSimple : render
+      
+      currentRenderFn(app, [
         'div',
-        ['h1', 'Performance Test'],
-        ['p', `Counter: ${counter}`],
+        ['h1', 'Unified Architecture Performance Test'],
+        ['p', `Render method: ${renderMethod} | Counter: ${counter}`],
+        
+        // Performance comparison controls
+        ['div', { style: { marginBottom: '16px', padding: '8px', background: '#f5f5f5', borderRadius: '4px' } },
+          ['h3', 'Render Method Comparison'],
+          ['label', { style: { marginRight: '16px' } },
+            ['input', { 
+              type: 'radio', 
+              name: 'renderMethod', 
+              value: 'render',
+              checked: renderMethod === 'render',
+              on: { 
+                change: { type: 'CHANGE_RENDER_METHOD', data: { method: 'render' } }
+              }
+            }],
+            ' render() (with diffing)'
+          ],
+          ['label',
+            ['input', { 
+              type: 'radio', 
+              name: 'renderMethod', 
+              value: 'renderSimple',
+              checked: renderMethod === 'renderSimple',
+              on: { 
+                change: { type: 'CHANGE_RENDER_METHOD', data: { method: 'renderSimple' } }
+              }
+            }],
+            ' renderSimple() (unified path)'
+          ]
+        ],
+        
+        // Dynamic list to test diffing performance
         ['div', { class: 'list' },
+          ['h3', 'Dynamic List (Keyed for Efficient Updates)'],
           ['ul',
-            ['li', { 'singultus/key': 1 }, 'Item 1'],
-            ['li', { 'singultus/key': 2 }, 'Item 2'],
-            ['li', { 'singultus/key': 3 }, 'Item 3']
+            ...items.map(item => 
+              ['li', { 
+                'singultus/key': item.id,
+                style: { 
+                  padding: '4px 8px', 
+                  margin: '2px 0', 
+                  background: item.value > 0.5 ? '#e3f2fd' : '#f3e5f5',
+                  borderRadius: '2px',
+                  display: 'flex',
+                  justifyContent: 'space-between'
+                }
+              }, 
+                ['span', `${item.name}: ${item.value.toFixed(3)}`],
+                ['button', {
+                  style: { fontSize: '12px', padding: '2px 6px' },
+                  on: { 
+                    click: { type: 'RANDOMIZE_ITEM', data: { id: item.id } }
+                  }
+                }, '🎲']
+              ]
+            )
+          ]
+        ],
+        
+        // Large content block to test rendering performance
+        ['div', { style: { marginTop: '16px' } },
+          ['h3', 'Large Content Block'],
+          ['div', { style: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(100px, 1fr))', gap: '4px' } },
+            ...Array(100).fill().map((_, i) => 
+              ['div', {
+                'singultus/key': `block-${i}`,
+                style: { 
+                  padding: '8px', 
+                  background: i % 2 === counter % 2 ? '#ffebee' : '#e8f5e8',
+                  textAlign: 'center',
+                  fontSize: '12px'
+                }
+              }, `${i + 1}`]
+            )
           ]
         ]
       ])
       
       const end = performance.now()
-      console.log(`Render took ${end - start}ms`)
+      console.log(`${renderMethod} took ${(end - start).toFixed(2)}ms`)
       updateStats()
     }
+
+    // Set up data-driven event handlers
+    getEventDispatcher().subscribe(action => {
+      switch (action.type) {
+        case 'CHANGE_RENDER_METHOD':
+          renderMethod = action.data?.method || 'render'
+          renderApp()
+          break
+          
+        case 'RANDOMIZE_ITEM':
+          const itemId = action.data?.id
+          if (itemId) {
+            items = items.map(item => 
+              item.id === itemId 
+                ? { ...item, value: Math.random() }
+                : item
+            )
+            renderApp()
+          }
+          break
+      }
+    })
 
     // Initial render
     renderApp()
 
     document.getElementById('update').addEventListener('click', () => {
       counter++
+      // Shuffle items to create more complex diff
+      if (counter % 3 === 0) {
+        items = [...items].sort(() => Math.random() - 0.5)
+      }
       renderApp()
     })
 
     document.getElementById('no-change').addEventListener('click', () => {
-      // Render the exact same content - should be optimized away
+      // Render the exact same content - should be optimized away with render()
+      // but renderSimple() will always re-create
       renderApp()
     })
 
