@@ -244,7 +244,78 @@ function diffChildren(oldChildren, newChildren) {
   return patches;
 }
 
-// src/patch.ts
+// src/events.ts
+var DefaultEventDispatcher = class {
+  constructor() {
+    this.handlers = /* @__PURE__ */ new Set();
+  }
+  dispatch(action) {
+    for (const handler of this.handlers) {
+      handler(action);
+    }
+  }
+  subscribe(handler) {
+    this.handlers.add(handler);
+    return () => this.handlers.delete(handler);
+  }
+};
+var globalDispatcher = new DefaultEventDispatcher();
+function setEventDispatcher(dispatcher) {
+  globalDispatcher = dispatcher;
+}
+function getEventDispatcher() {
+  return globalDispatcher;
+}
+var EVENT_ACTIONS_KEY = "__bioroid_events__";
+var isEventSystemInitialized = false;
+var DELEGATED_EVENTS = ["click", "input", "change", "submit", "focus", "blur", "keydown", "keyup", "mousedown", "mouseup"];
+function initializeEventSystem() {
+  if (isEventSystemInitialized)
+    return;
+  for (const eventType of DELEGATED_EVENTS) {
+    document.addEventListener(eventType, (event) => {
+      let target = event.target;
+      while (target && target !== document.body) {
+        const eventActions = target[EVENT_ACTIONS_KEY];
+        if (eventActions && eventActions[eventType]) {
+          const action = eventActions[eventType];
+          event.preventDefault();
+          const enrichedAction = {
+            ...action,
+            data: {
+              ...action.data,
+              value: target instanceof HTMLInputElement ? target.value : void 0,
+              checked: target instanceof HTMLInputElement ? target.checked : void 0,
+              timestamp: Date.now()
+            }
+          };
+          globalDispatcher.dispatch(enrichedAction);
+          break;
+        }
+        target = target.parentElement;
+      }
+    }, true);
+  }
+  isEventSystemInitialized = true;
+}
+function attachEventAction(element, eventType, action) {
+  initializeEventSystem();
+  if (!element[EVENT_ACTIONS_KEY]) {
+    element[EVENT_ACTIONS_KEY] = {};
+  }
+  element[EVENT_ACTIONS_KEY][eventType] = action;
+}
+function removeEventAction(element, eventType) {
+  const eventActions = element[EVENT_ACTIONS_KEY];
+  if (eventActions) {
+    delete eventActions[eventType];
+    if (Object.keys(eventActions).length === 0) {
+      delete element[EVENT_ACTIONS_KEY];
+    }
+  }
+}
+
+// src/attributes.ts
 var BOOLEAN_ATTRIBUTES = /* @__PURE__ */ new Set([
   "autofocus",
   "autoplay",
@@ -310,6 +381,8 @@ function setAttributes(element, attrs, isSvg = false) {
       for (const [eventType, handler] of Object.entries(value)) {
         if (typeof handler === "function") {
           element.addEventListener(eventType, handler);
+        } else if (handler && typeof handler === "object" && "type" in handler) {
+          attachEventAction(element, eventType, handler);
         }
       }
     } else if (key.startsWith("singultus/")) {
@@ -352,6 +425,8 @@ function updateAttributes(element, oldProps = {}, newProps = {}, isSvg = false) 
     for (const [eventType, handler] of Object.entries(oldProps.on)) {
       if (typeof handler === "function") {
         element.removeEventListener(eventType, handler);
+      } else if (handler && typeof handler === "object" && "type" in handler) {
+        removeEventAction(element, eventType);
       }
     }
   }
@@ -378,6 +453,8 @@ function updateAttributes(element, oldProps = {}, newProps = {}, isSvg = false) 
   }
   setAttributes(element, newProps, isSvg);
 }
+
+// src/patch.ts
 function createElement(vNode) {
   if (vNode.type === "text") {
     return document.createTextNode(vNode.text || "");
@@ -510,202 +587,6 @@ function applyChildPatches(parent, operations, vNodeMap) {
 }
 
 // src/singultus.ts
-function isNode2(element) {
-  return Array.isArray(element) && typeof element[0] === "string";
-}
-function parseTagName2(tag) {
-  const idMatch = tag.match(/#([^.]+)/);
-  const classMatches = tag.match(/\.([^#.]+)/g);
-  const tagName = tag.replace(/#[^.]*/, "").replace(/\.[^#]*/g, "") || "div";
-  const id = idMatch?.[1];
-  const classes = classMatches?.map((c) => c.slice(1)) || [];
-  return { tagName, id, classes };
-}
-var BOOLEAN_ATTRIBUTES2 = /* @__PURE__ */ new Set([
-  "autofocus",
-  "autoplay",
-  "async",
-  "checked",
-  "controls",
-  "defer",
-  "disabled",
-  "hidden",
-  "loop",
-  "multiple",
-  "muted",
-  "open",
-  "readonly",
-  "required",
-  "reversed",
-  "selected",
-  "scoped",
-  "seamless",
-  "itemScope",
-  "noValidate",
-  "allowFullscreen",
-  "formNoValidate",
-  "default",
-  "capture",
-  "autocomplete"
-]);
-var DOM_PROPERTIES2 = /* @__PURE__ */ new Set([
-  "value",
-  "checked",
-  "selected",
-  "defaultValue",
-  "defaultChecked",
-  "defaultSelected",
-  "innerHTML",
-  "textContent",
-  "innerText",
-  "htmlFor",
-  "className",
-  "tabIndex",
-  "contentEditable",
-  "draggable",
-  "spellcheck",
-  "translate"
-]);
-function setAttributes2(element, attrs) {
-  for (const [key, value] of Object.entries(attrs)) {
-    if (key === "style") {
-      if (typeof value === "string") {
-        element.setAttribute("style", value);
-      } else if (typeof value === "object" && value !== null) {
-        const htmlElement = element;
-        for (const [prop, val] of Object.entries(value)) {
-          const kebabProp = prop.replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`);
-          htmlElement.style.setProperty(kebabProp, String(val));
-        }
-      }
-    } else if (key === "innerHTML") {
-      element.innerHTML = String(value);
-    } else if (key === "textContent") {
-      element.textContent = String(value);
-    } else if (key === "on" && typeof value === "object" && value !== null) {
-      for (const [eventType, handler] of Object.entries(value)) {
-        if (typeof handler === "function") {
-          element.addEventListener(eventType, handler);
-        }
-      }
-    } else if (key.startsWith("singultus/")) {
-      continue;
-    } else if (key === "className" || key === "class") {
-      if (value) {
-        element.setAttribute("class", String(value));
-      }
-    } else if (key === "htmlFor" && element instanceof HTMLLabelElement) {
-      element.htmlFor = String(value);
-    } else if (DOM_PROPERTIES2.has(key)) {
-      element[key] = value;
-    } else if (BOOLEAN_ATTRIBUTES2.has(key)) {
-      if (value) {
-        element.setAttribute(key, key);
-      } else {
-        element.removeAttribute(key);
-      }
-    } else if (key.startsWith("data-") || key.startsWith("aria-")) {
-      if (value != null) {
-        element.setAttribute(key, String(value));
-      } else {
-        element.removeAttribute(key);
-      }
-    } else {
-      if (value != null) {
-        element.setAttribute(key, String(value));
-      } else {
-        element.removeAttribute(key);
-      }
-    }
-  }
-}
-var SVG_ELEMENTS2 = /* @__PURE__ */ new Set([
-  "svg",
-  "g",
-  "path",
-  "circle",
-  "ellipse",
-  "line",
-  "rect",
-  "polyline",
-  "polygon",
-  "text",
-  "tspan",
-  "textPath",
-  "marker",
-  "defs",
-  "clipPath",
-  "mask",
-  "pattern",
-  "image",
-  "switch",
-  "foreignObject",
-  "use",
-  "symbol",
-  "linearGradient",
-  "radialGradient",
-  "stop",
-  "animate",
-  "animateTransform",
-  "animateMotion"
-]);
-function createElementLegacy(singultus) {
-  const [tag, ...rest] = singultus;
-  const { tagName, id, classes } = parseTagName2(tag);
-  const element = SVG_ELEMENTS2.has(tagName) ? document.createElementNS("http://www.w3.org/2000/svg", tagName) : document.createElement(tagName);
-  if (id) {
-    element.id = id;
-  }
-  if (classes.length > 0) {
-    if (SVG_ELEMENTS2.has(tagName)) {
-      element.setAttribute("class", classes.join(" "));
-    } else {
-      element.className = classes.join(" ");
-    }
-  }
-  let attrs = {};
-  let children = [];
-  if (rest.length > 0 && typeof rest[0] === "object" && !Array.isArray(rest[0]) && rest[0] !== null) {
-    attrs = rest[0];
-    children = rest.slice(1);
-  } else {
-    children = rest;
-  }
-  if (attrs.class || attrs.className) {
-    const existingClasses = element.className ? element.className.split(" ") : [];
-    const newClasses = String(attrs.class || attrs.className).split(" ").filter(Boolean);
-    const combinedClasses = [.../* @__PURE__ */ new Set([...existingClasses, ...newClasses])].join(" ");
-    if (SVG_ELEMENTS2.has(tagName)) {
-      element.setAttribute("class", combinedClasses);
-    } else {
-      element.className = combinedClasses;
-    }
-  }
-  setAttributes2(element, attrs);
-  for (const child of children) {
-    if (child != null) {
-      if (isNode2(child)) {
-        element.appendChild(createElementLegacy(child));
-      } else if (Array.isArray(child)) {
-        for (const nestedChild of child) {
-          if (nestedChild != null) {
-            if (isNode2(nestedChild)) {
-              element.appendChild(createElementLegacy(nestedChild));
-            } else {
-              element.appendChild(document.createTextNode(String(nestedChild)));
-            }
-          }
-        }
-      } else {
-        element.appendChild(document.createTextNode(String(child)));
-      }
-    }
-  }
-  if (attrs["singultus/on-render"]) {
-    attrs["singultus/on-render"](element);
-  }
-  return element;
-}
 var containerVNodeMap = /* @__PURE__ */ new WeakMap();
 var containerElementMap = /* @__PURE__ */ new WeakMap();
 function mapElementsToVNodes(element, vNode, map) {
@@ -728,8 +609,16 @@ function render(container, singultus) {
   const oldVNode = containerVNodeMap.get(container);
   const newVNode = singultus == null ? null : createVNode(singultus);
   if (!oldVNode) {
-    renderSimple(container, singultus);
+    container.innerHTML = "";
     if (newVNode) {
+      if (newVNode.tag === "fragment" && newVNode.children) {
+        for (const child of newVNode.children) {
+          container.appendChild(createElement(child));
+        }
+      } else {
+        const newElement = createElement(newVNode);
+        container.appendChild(newElement);
+      }
       containerVNodeMap.set(container, newVNode);
       const elementMap2 = /* @__PURE__ */ new Map();
       if (container.firstElementChild) {
@@ -802,9 +691,17 @@ function render(container, singultus) {
       }
     }
   } catch (error) {
-    console.warn("Patch application failed, falling back to simple render:", error);
-    renderSimple(container, singultus);
+    console.warn("Patch application failed, falling back to full re-render:", error);
+    container.innerHTML = "";
     if (newVNode) {
+      if (newVNode.tag === "fragment" && newVNode.children) {
+        for (const child of newVNode.children) {
+          container.appendChild(createElement(child));
+        }
+      } else {
+        const newElement = createElement(newVNode);
+        container.appendChild(newElement);
+      }
       containerVNodeMap.set(container, newVNode);
       const elementMap2 = /* @__PURE__ */ new Map();
       if (container.firstElementChild) {
@@ -818,36 +715,24 @@ function render(container, singultus) {
   }
 }
 function renderSimple(container, singultus) {
-  container.innerHTML = "";
-  if (singultus == null) {
-    return;
-  }
-  if (isNode2(singultus)) {
-    container.appendChild(createElementLegacy(singultus));
-  } else if (Array.isArray(singultus)) {
-    for (const child of singultus) {
-      if (child != null) {
-        if (isNode2(child)) {
-          container.appendChild(createElementLegacy(child));
-        } else if (Array.isArray(child)) {
-          renderSimple(container, child);
-        } else {
-          container.appendChild(document.createTextNode(String(child)));
-        }
-      }
-    }
-  } else {
-    container.appendChild(document.createTextNode(String(singultus)));
-  }
+  containerVNodeMap.delete(container);
+  containerElementMap.delete(container);
+  render(container, singultus);
 }
 export {
+  DefaultEventDispatcher,
   applyChildPatches,
   applyPatches,
+  attachEventAction,
   createElement,
   createVNode,
   diff,
+  getEventDispatcher,
+  removeEventAction,
   render,
   renderSimple,
+  setAttributes,
+  setEventDispatcher,
   updateAttributes
 };
 //# sourceMappingURL=index.mjs.map

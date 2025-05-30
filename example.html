@@ -27,6 +27,7 @@
             { id: 3, name: 'Cherry', price: 2.50 }
         ]
         let inputValue = ''
+        let lastSubmittedValue = ''
 
         // Set up data-driven event system
         getEventDispatcher().subscribe(action => {
@@ -66,7 +67,9 @@
                     break
                     
                 case 'FORM_SUBMITTED':
-                    alert(`Form submitted with: "${inputValue}"`)
+                    lastSubmittedValue = inputValue
+                    inputValue = '' // Clear input after submit
+                    updateApp()
                     break
             }
         })
@@ -168,8 +171,9 @@
                             ['button.button', { type: 'submit' }, 'Submit Form']
                         ]
                     ],
-                    ['p', `Current input: "${inputValue}"`]
-                ],
+                    ['p', `Current input: "${inputValue}"`],
+                    lastSubmittedValue ? ['p', { style: { color: 'green', fontWeight: 'bold' } }, `Last submitted: "${lastSubmittedValue}"`] : null
+                ].filter(Boolean),
                 
                 // Mixed event types example
                 ['div.card',

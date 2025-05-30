@@ -53,6 +53,9 @@ function initializeEventSystem() {
         if (eventActions && eventActions[eventType]) {
           const action = eventActions[eventType]
           
+          // Always prevent default for data-driven events to avoid side effects
+          event.preventDefault()
+          
           const enrichedAction: EventAction = {
             ...action,
             data: {
